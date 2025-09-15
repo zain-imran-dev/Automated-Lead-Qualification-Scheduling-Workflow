@@ -1,0 +1,655 @@
+{
+  "name": "My workflow 6",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1wGNwBQncT32FqEw7atOCbajDX23xhZwCym87OKr3KXE",
+          "mode": "list",
+          "cachedResultName": "sample_leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wGNwBQncT32FqEw7atOCbajDX23xhZwCym87OKr3KXE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2133394390,
+          "mode": "list",
+          "cachedResultName": "sample_leads.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wGNwBQncT32FqEw7atOCbajDX23xhZwCym87OKr3KXE/edit#gid=2133394390"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bcdb03be-a946-4c4e-90ed-8c8f14f361be",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "tkBSZTJrfyToA0CN",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "20a2c01d-1fd5-4b3f-87ad-de77735dd882",
+              "name": "product_interest",
+              "value": "={{ $json.product_interest }}",
+              "type": "string"
+            },
+            {
+              "id": "e469628b-c714-41a8-822a-da9b6a6dcfdb",
+              "name": "lead_id",
+              "value": "={{ $json.lead_id }}{{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "0cfe52ae-4023-46df-964e-e16855a24198",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "6513ea54-2e0b-4ae0-a5c6-eb324ab33cc9",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "6ace4077-e5cc-4d3e-b428-6883055c5523",
+              "name": "phone",
+              "value": "={{ $json.phone }}",
+              "type": "number"
+            },
+            {
+              "id": "c06a8693-9231-47e4-8fc0-172f9d4246a0",
+              "name": "channel",
+              "value": "={{ $json.channel }}",
+              "type": "string"
+            },
+            {
+              "id": "1fa36e37-4f98-49c5-8a32-329a3002e7f5",
+              "name": "product_interest",
+              "value": "={{ $json.product_interest }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "59bbc9a7-8eb2-40b9-92be-04fda9dee71b",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are an SDR assistant. Return only JSON with keys: status, questions, proposed_times, notes."
+            },
+            {
+              "content": "=Given this lead:\nName: {{$json[\"name\"]}}\nEmail: {{$json[\"email\"]}}\nPhone: {{$json[\"phone\"]}}\nInterest: {{$json[\"product_interest\"]}}\nChannel: {{$json[\"channel\"]}}\n\nReturn only valid JSON.\nreturn items.map(item => {\n  // Force to string, or remove non-digits if you want pure number\n  item.json.lead_id = String(item.json.lead_id || '');\n  return item;\n});\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        416,
+        0
+      ],
+      "id": "c4675b01-6b81-40b7-8fa6-c1777e0b374d",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "wVYqHez9sssBKROU",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse possible OpenAI outputs robustly\n\n// Try all possible OpenAI output paths\nconst raw =\n  items[0].json.response ||\n  items[0].json.message?.content ||\n  (items[0].json.choices && items[0].json.choices[0]?.message?.content) ||\n  (items[0].json.output && items[0].json.output[0]?.content) ||\n  '';\n\n// Object to hold parsed AI response\nlet parsed = {};\n\ntry {\n  // Strip ```json ... ``` code fences if present\n  const m = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);\n  const jsonText = m ? m[1].trim() : raw.trim();\n\n  parsed = jsonText ? JSON.parse(jsonText) : {};\n} catch (e) {\n  // Fallback if JSON parsing fails\n  parsed = { status: 'needs_more_info', notes: 'AI parse error' };\n}\n\n// Return in proper n8n format:\n// Keep original lead fields + parsed AI fields\nreturn [\n  {\n    json: {\n      ...items[0].json,\n      ...parsed\n    }\n  }\n];\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        496,
+        224
+      ],
+      "id": "865eb7e3-e70c-46c8-8b55-5700ba89714a",
+      "name": "Code Tool"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "",
+                    "rightValue": "={{$json[\"status\"]}}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a352763b-a88a-46b3-a7ca-4ed4a64bc1f1"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8f18ccf4-d3bd-4265-98b8-87c94998bc0b",
+                    "leftValue": "",
+                    "rightValue": "qualified",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "35e78e8e-02b6-441b-81ce-54105b189b3a",
+                    "leftValue": "",
+                    "rightValue": "needs_more_info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4feecb4a-86ea-4531-a2e9-e8b0f4b3df2e",
+                    "leftValue": "",
+                    "rightValue": "unqualified",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        768,
+        0
+      ],
+      "id": "9da00f13-c38a-4295-a543-4c66414fda31",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cal.com/mohyuddin-rao-kt6kmy",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=Authorization",
+              "value": "=Bearer cal_live_3ff767ad1388895133f760935642d7b4"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"eventId\": \"YOUR_EVENT_ID\",\n  \"invitee\": {\n    \"name\": \"={{$json.name}}\",\n    \"email\": \"={{$json.email}}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        976,
+        -80
+      ],
+      "id": "e571a5e8-108d-4471-943e-7e8308db93f3",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1524972-2770-4e81-af75-3f2d986156fb",
+              "name": "cal_booking_url",
+              "value": "=https://cal.com/mohyuddin-rao-kt6kmy/15min\\",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        -80
+      ],
+      "id": "143bdf8b-37b9-46b7-9336-83905e81c584",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = items[0].json.data || \"\";\n// Look for the first Cal.com link in the response\nconst match = html.match(/https:\\/\\/cal\\.com\\/[^\\s\"']+/);\nreturn [{\n  json: {\n    ...items[0].json,\n    cal_booking_url: match ? match[0] : null\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        112
+      ],
+      "id": "7ff5a69e-9184-4b6c-a4b8-ac85cb655809",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Google Sheets Trigger').item.json.email }}",
+        "subject": "=Meeting confirmation — {{ $('Google Sheets Trigger').item.json.product_interest }}",
+        "message": "=Hi {{ $('Google Sheets Trigger').item.json.name }}  Your meeting is booked: {{ $json.cal_booking_url }}  Thanks,   Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1504,
+        -32
+      ],
+      "id": "eaef3086-fc3c-431c-acc6-2bd87db1dc71",
+      "name": "Send a message",
+      "webhookId": "97a946eb-b6d3-4563-b4f2-962b4aed11d8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "86BaogfBFuD2o2jo",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1wGNwBQncT32FqEw7atOCbajDX23xhZwCym87OKr3KXE",
+          "mode": "list",
+          "cachedResultName": "sample_leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wGNwBQncT32FqEw7atOCbajDX23xhZwCym87OKr3KXE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2133394390,
+          "mode": "list",
+          "cachedResultName": "sample_leads.csv",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wGNwBQncT32FqEw7atOCbajDX23xhZwCym87OKr3KXE/edit#gid=2133394390"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $('Google Sheets Trigger').item.json.status }}:Booked",
+            "id": "={{ $('Google Sheets Trigger').item.json.lead_id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "product_interest",
+              "displayName": "product_interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_message",
+              "displayName": "last_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cal_booking_url",
+              "displayName": "cal_booking_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "threadId",
+              "displayName": "threadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "labelIds",
+              "displayName": "labelIds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1712,
+        -32
+      ],
+      "id": "25cf64ff-0385-4562-85f3-c9257836c9e8",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "RwrkUydb4DCw6slk",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Message a model",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "32a8502d-a259-46d4-8a7a-6b637ecba8c7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4bba872f0a02488e7d5227cd3dd253f316112d4f7b22067e42f7dc7e68b8deb4"
+  },
+  "id": "FOkacw5qNbAu6hks",
+  "tags": []
+}
