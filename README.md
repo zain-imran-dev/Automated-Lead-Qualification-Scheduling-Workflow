@@ -1,32 +1,36 @@
 Automated Lead Qualification & Scheduling Workflow
+
+<img width="1560" height="523" alt="Lead Qualification   Scheduling Workflow" src="https://github.com/user-attachments/assets/04023d7c-ee97-409c-b813-4c2840a55727" />
+
+
 Overview
 An intelligent n8n workflow that automates the entire lead qualification and meeting scheduling process from Google Sheets to calendar booking confirmation.
 Features
-🔄 Automated Lead Processing
+ Automated Lead Processing
 
 Real-time monitoring of Google Sheets for new leads
 Automatic field extraction and data normalization
 Continuous polling for instant lead capture
 
-🤖 AI-Powered Lead Qualification
+ AI-Powered Lead Qualification
 
 GPT-4o-mini integration for intelligent lead scoring
 Automatic status classification: qualified, needs_more_info, unqualified
 Smart analysis of lead data including contact info, product interest, and acquisition channel
 
-📅 Smart Meeting Scheduling
+ Smart Meeting Scheduling
 
 Automatic Cal.com integration for qualified leads
 Dynamic booking URL generation
 Seamless calendar appointment creation
 
-📧 Automated Communication
+ Automated Communication
 
 Personalized email notifications via Gmail
 Meeting confirmation with embedded booking links
 Professional email templates with lead-specific details
 
-📊 Data Management
+ Data Management
 
 Automatic Google Sheets updates with lead status
 Real-time tracking of booking URLs and lead progression
